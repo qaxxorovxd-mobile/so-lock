@@ -22,12 +22,29 @@ A fast, minimal app locker for Android, built with Flutter.
 - Short hops to another screen and back (e.g. a gallery's private-album password prompt) don't re-lock the app;
   going to the home screen or turning the screen off does.
 
+## Download
+
+Latest signed APK: **[so-lock.apk](https://github.com/qaxxorovxd-mobile/so-lock/releases/latest/download/so-lock.apk)**
+(or the smaller [arm64](https://github.com/qaxxorovxd-mobile/so-lock/releases/latest/download/so-lock-arm64.apk) build for most modern phones).
+Website: https://qaxxorovxd-mobile.github.io/so-lock/
+
 ## Build
 
 ```sh
 flutter pub get
 flutter build apk --release
 ```
+
+Release signing reads `android/key.properties` (not committed):
+
+```properties
+storePassword=...
+keyPassword=...
+keyAlias=solock
+storeFile=../so-lock-release.jks
+```
+
+Without it, release builds fall back to the debug key.
 
 On first launch, enable **So Lock** under *Settings → Accessibility*.
 

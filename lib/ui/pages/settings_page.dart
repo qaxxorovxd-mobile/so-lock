@@ -159,7 +159,7 @@ class SettingsPage extends StatelessWidget {
                 const Section(
                   header: 'About',
                   footer: 'All data stays on this device. Codes are stored only as salted hashes.',
-                  children: [Tile(title: 'Version', value: '1.0.0')],
+                  children: [Tile(title: 'Version', value: '1.1.0')],
                 ),
               ]),
             ),
