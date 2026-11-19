@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="accessibility_desc">So Lock detects which app is opened and locks the apps you choose. It never reads screen content or sends any data.</string>
+</resources>
