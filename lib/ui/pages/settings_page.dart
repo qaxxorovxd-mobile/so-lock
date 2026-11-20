@@ -80,11 +80,18 @@ class SettingsPage extends StatelessWidget {
                             children: [
                               const Text(
                                 'So Lock',
-                                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: C.text, letterSpacing: -0.5),
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: C.text,
+                                  letterSpacing: -0.5,
+                                ),
                               ),
                               const SizedBox(height: 3),
                               Text(
-                                s.accessibilityOn && c.enabled ? 'Protection on · ${c.locked.length} apps' : 'Protection is off',
+                                s.accessibilityOn && c.enabled
+                                    ? 'Protection on · ${c.locked.length} apps'
+                                    : 'Protection is off',
                                 style: T.sub,
                               ),
                             ],
@@ -107,7 +114,9 @@ class SettingsPage extends StatelessWidget {
                     SwitchTile(
                       leading: const Glyph(Icons.fingerprint_rounded, C.green),
                       title: 'Biometrics',
-                      subtitle: s.biometricAvailable ? 'Falls back to your code if it fails' : 'Not set up on this device',
+                      subtitle: s.biometricAvailable
+                          ? 'Falls back to your code if it fails'
+                          : 'Not set up on this device',
                       value: c.biometrics && s.biometricAvailable,
                       onChanged: s.biometricAvailable ? (v) => s.update((c) => c.biometrics = v) : null,
                     ),
@@ -125,7 +134,7 @@ class SettingsPage extends StatelessWidget {
                     Tile(
                       leading: const Glyph(CupertinoIcons.paintbrush_fill, C.pink),
                       title: 'Lock Screen',
-                      subtitle: 'Fon, rang, klaviatura, animatsiya',
+                      subtitle: 'Background, keypad and haptics',
                       chevron: true,
                       onTap: () => push(context, const CustomizePage()),
                     ),
@@ -159,7 +168,7 @@ class SettingsPage extends StatelessWidget {
                 const Section(
                   header: 'About',
                   footer: 'All data stays on this device. Codes are stored only as salted hashes.',
-                  children: [Tile(title: 'Version', value: '1.1.0')],
+                  children: [Tile(title: 'Version', value: '1.2.0')],
                 ),
               ]),
             ),

@@ -14,6 +14,7 @@ import '../../core/security.dart';
 import '../../core/store.dart';
 import '../../core/vibe.dart';
 import 'lock_widgets.dart';
+import '../theme.dart';
 
 class LockTarget {
   const LockTarget({this.pkg, required this.name, this.icon});
@@ -32,8 +33,13 @@ class LockView extends StatefulWidget {
     required this.onUnlock,
     this.bioTrigger,
     this.preview = false,
+    this.guardStore = const GuardStore(),
+    this.active = true,
   });
 
+  final GuardStore guardStore;
+  /// The cached overlay engine can build before an Android Activity is attached.
+  final bool active;
   final AppConfig config;
   final LockTarget target;
   final VoidCallback onUnlock;
@@ -48,7 +54,13 @@ class LockView extends StatefulWidget {
   State<LockView> createState() => _LockViewState();
 }
 
-class _LockViewState extends State<LockView> with TickerProviderStateMixin {
+class _LockViewState extends State<LockView> with TickerProviderStateMixin, WidgetsBindingObserver {
+  final _auth = LocalAuthentication();
+  late final Future<void> _guardReady;
+  bool _completed = false;
+  bool _retryOnResume = false;
+  bool _foreground = true;
+  int _authEpoch = 0;
   late final AnimationController _shake = AnimationController(vsync: this, duration: const Duration(milliseconds: 420));
   late final AnimationController _out = AnimationController(vsync: this, duration: const Duration(milliseconds: 170));
 
@@ -84,7 +96,11 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
     super.initState();
     if (widget.preview) return;
     _in.forward();
-    _loadGuard();
+    WidgetsBinding.instance.addObserver(this);
+    _foreground =
+        WidgetsBinding.instance.lifecycleState == null ||
+        WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+    _guardReady = _loadGuard();
     widget.bioTrigger?.addListener(_onBioTrigger);
     _bioReady = _initBio();
   }
@@ -92,7 +108,18 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
   Future<void>? _bioReady;
 
   @override
+  void didUpdateWidget(covariant LockView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!widget.preview && widget.active && !oldWidget.active) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _runBio());
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _authEpoch++;
+    if (_bioRunning) unawaited(_stopBio());
     widget.bioTrigger?.removeListener(_onBioTrigger);
     _shake.dispose();
     _out.dispose();
@@ -105,17 +132,47 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
 
   // ---------------- biometrics (with PIN fallback) ----------------
 
+  Future<void> _stopBio() async {
+    try {
+      await _auth.stopAuthentication();
+    } catch (_) {}
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (widget.preview) return;
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden) {
+      _foreground = false;
+      _authEpoch++;
+      if (_bioRunning) unawaited(_stopBio());
+    } else if (state == AppLifecycleState.resumed) {
+      final wasAway = !_foreground;
+      _foreground = true;
+      if (wasAway) {
+        if (_completed) {
+          _completed = false;
+          _busy = false;
+          _out.reset();
+        }
+        if (_bioRunning) {
+          _retryOnResume = true;
+        } else {
+          _onBioTrigger();
+        }
+      }
+    }
+  }
+
   Future<void> _initBio() async {
     if (!cfg.biometrics) return;
     try {
-      final la = LocalAuthentication();
-      final types = await la.getAvailableBiometrics();
+      final types = await _auth.getAvailableBiometrics();
       if (!mounted) return;
       setState(() {
         _bioAvailable = types.isNotEmpty;
         _bioFace = types.contains(BiometricType.face) && !types.contains(BiometricType.fingerprint);
       });
-      if (_bioAvailable && widget.bioTrigger == null) {
+      if (_bioAvailable) {
         WidgetsBinding.instance.addPostFrameCallback((_) => _runBio());
       }
     } catch (_) {}
@@ -125,22 +182,40 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
 
   Future<void> _runBio() async {
     await _bioReady;
-    if (!_bioAvailable || _bioRunning || _busy || _isLockedOut || _fakeCrash || !mounted) return;
+    await _guardReady;
+    if (!mounted ||
+        !widget.active ||
+        !_foreground ||
+        _completed ||
+        !_bioAvailable ||
+        _bioRunning ||
+        _busy ||
+        _isLockedOut ||
+        _fakeCrash) {
+      return;
+    }
     _bioRunning = true;
+    final epoch = _authEpoch;
     try {
-      final ok = await LocalAuthentication().authenticate(
+      final ok = await _auth.authenticate(
         localizedReason: widget.target.isSelf ? 'Unlock So Lock' : 'Unlock ${widget.target.name}',
         biometricOnly: true,
-        persistAcrossBackgrounding: true,
+        persistAcrossBackgrounding: false,
       );
-      if (ok && mounted) {
+      if (ok && mounted && _foreground && epoch == _authEpoch && !_busy && !_completed && !_isLockedOut) {
         await _success();
       }
     } catch (_) {
       // Sensor failed / locked out / unavailable → the PIN pad is the fallback.
-      if (mounted) setState(() => _msg = 'Biometrics unavailable — enter your code');
+      if (mounted && _foreground && epoch == _authEpoch && !_completed) {
+        setState(() => _msg = 'Use your code, or tap to retry biometrics');
+      }
     } finally {
       _bioRunning = false;
+      if (_retryOnResume && mounted && _foreground) {
+        _retryOnResume = false;
+        unawaited(_runBio());
+      }
     }
   }
 
@@ -149,7 +224,8 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
   bool get _isLockedOut => _lockedUntil != null && DateTime.now().isBefore(_lockedUntil!);
 
   Future<void> _loadGuard() async {
-    final (fails, until) = await Store.loadGuard();
+    final (fails, until) = await widget.guardStore.load();
+    if (!mounted) return;
     _guardFails = fails;
     if (until > DateTime.now().millisecondsSinceEpoch) {
       _startLockout(DateTime.fromMillisecondsSinceEpoch(until));
@@ -177,7 +253,7 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
   // ---------------- input ----------------
 
   void _digit(int d) {
-    if (_busy || _isLockedOut || widget.preview) return;
+    if (!mounted || _busy || _completed || _isLockedOut || widget.preview) return;
     if (_input.length >= cfg.type.length) return;
     setState(() {
       _input += '$d';
@@ -185,7 +261,10 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
     });
     if (_input.length == cfg.type.length) {
       // Let the last dot render before verifying.
-      Future.delayed(const Duration(milliseconds: 70), () => _submit(_input));
+      final code = _input;
+      Future.delayed(const Duration(milliseconds: 70), () {
+        if (mounted && _input == code) _submit(code);
+      });
     }
   }
 
@@ -195,8 +274,13 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
   }
 
   Future<void> _submit(String code) async {
-    if (_busy || code.isEmpty) return;
+    if (widget.preview) return;
+    await _guardReady;
+    if (!mounted || !widget.active || !_foreground || _busy || _completed || _isLockedOut || code.isEmpty) return;
     _busy = true;
+    _authEpoch++;
+    if (_bioRunning) await _stopBio();
+    if (!mounted) return;
     final r = Security.check(cfg, code);
     switch (r) {
       case CheckOk():
@@ -209,16 +293,20 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
   }
 
   Future<void> _success() async {
+    if (!mounted || _completed) return;
+    _completed = true;
+    final epoch = _authEpoch;
     _busy = true;
     _guardFails = 0;
-    unawaited(Store.saveGuard(0, 0));
+    unawaited(widget.guardStore.save(0, 0));
     Vibe.success(st);
     if (st.animations && mounted) {
       setState(() => _tint = const Color(0xFF30D158));
       await Future<void>.delayed(const Duration(milliseconds: 110));
+      if (!mounted || !_foreground || epoch != _authEpoch) return;
       await _out.forward();
     }
-    widget.onUnlock();
+    if (mounted && _foreground && epoch == _authEpoch) widget.onUnlock();
   }
 
   Future<void> _wrong() async {
@@ -226,7 +314,7 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
     _guardFails++;
     final lock = Security.lockoutFor(_guardFails);
     final until = lock == Duration.zero ? 0 : DateTime.now().add(lock).millisecondsSinceEpoch;
-    unawaited(Store.saveGuard(_guardFails, until));
+    unawaited(widget.guardStore.save(_guardFails, until));
     Vibe.error(st);
     if (st.animations) {
       setState(() => _tint = const Color(0xFFFF453A));
@@ -250,7 +338,7 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
   Future<void> _duress(DuressCode d) async {
     // Looks like a normal, successful entry from the outside.
     _guardFails = 0;
-    unawaited(Store.saveGuard(0, 0));
+    unawaited(widget.guardStore.save(0, 0));
     var action = d.action;
     if (widget.target.isSelf && action == DuressAction.silentOpen) action = DuressAction.fakeCrash;
 
@@ -261,7 +349,7 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
       case DuressAction.silentOpen:
         // Take the photo first (camera needs the screen), then open the app.
         await _record('duress', photo: d.photo, timeout: const Duration(milliseconds: 2200));
-        widget.onUnlock();
+        if (mounted && _foreground) widget.onUnlock();
         return;
       case DuressAction.lockScreen:
         await _record('duress', photo: d.photo, timeout: const Duration(milliseconds: 1800));
@@ -343,11 +431,13 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
               accent: accent,
               feedback: widget.preview ? null : () => Vibe.key(st),
               animate: st.animations,
-              enabled: !_isLockedOut,
+              enabled: !_isLockedOut && !_busy && !_completed,
               onDigit: _digit,
               onDelete: _delete,
               canDelete: _input.isNotEmpty,
-              leftAction: _bioAvailable ? BioButton(onTap: _runBio, face: _bioFace, feedback: () => Vibe.key(st)) : null,
+              leftAction: _bioAvailable
+                  ? BioButton(onTap: _runBio, face: _bioFace, feedback: () => Vibe.key(st))
+                  : null,
             ),
             from: 34,
             start: 0.22,
@@ -364,35 +454,44 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
       ],
     );
 
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, _) {
-        if (didPop || widget.preview) return;
-        widget.target.isSelf ? Native.moveToBack() : Native.goHome();
-      },
-      child: Material(
-        type: MaterialType.transparency,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            LockBackground(style: st),
-            FadeTransition(
-              opacity: ReverseAnimation(_out),
-              child: ScaleTransition(
-                scale: Tween(begin: 1.0, end: 1.06).animate(CurvedAnimation(parent: _out, curve: Curves.easeIn)),
-                child: content,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: lockOverlayStyle,
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (didPop || widget.preview) return;
+          widget.target.isSelf ? Native.moveToBack() : Native.goHome();
+        },
+        child: Material(
+          type: MaterialType.transparency,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              LockBackground(style: st),
+              FadeTransition(
+                opacity: ReverseAnimation(_out),
+                child: ScaleTransition(
+                  scale: Tween(begin: 1.0, end: 1.06).animate(CurvedAnimation(parent: _out, curve: Curves.easeIn)),
+                  child: content,
+                ),
               ),
-            ),
-            // A hidden 1px camera surface while capturing (required on some devices).
-            if (!widget.preview)
-              ValueListenableBuilder<CameraController?>(
-                valueListenable: IntruderCam.active,
-                builder: (_, c, _) => c == null || !c.value.isInitialized
-                    ? const SizedBox.shrink()
-                    : Positioned(left: 0, top: 0, width: 1, height: 1, child: Opacity(opacity: 0.01, child: CameraPreview(c))),
-              ),
-            if (_fakeCrash) _FakeCrash(appName: widget.target.name, onClose: _closeFakeCrash),
-          ],
+              // A hidden 1px camera surface while capturing (required on some devices).
+              if (!widget.preview)
+                ValueListenableBuilder<CameraController?>(
+                  valueListenable: IntruderCam.active,
+                  builder: (_, c, _) => c == null || !c.value.isInitialized
+                      ? const SizedBox.shrink()
+                      : Positioned(
+                          left: 0,
+                          top: 0,
+                          width: 1,
+                          height: 1,
+                          child: Opacity(opacity: 0.01, child: CameraPreview(c)),
+                        ),
+                ),
+              if (_fakeCrash) _FakeCrash(appName: widget.target.name, onClose: _closeFakeCrash),
+            ],
+          ),
         ),
       ),
     );
@@ -476,7 +575,7 @@ class _LockViewState extends State<LockView> with TickerProviderStateMixin {
                 controller: _pwd,
                 focusNode: _pwdFocus,
                 autofocus: !widget.preview,
-                enabled: !_isLockedOut && !widget.preview,
+                enabled: !_isLockedOut && !_busy && !_completed && !widget.preview,
                 obscureText: true,
                 enableSuggestions: false,
                 autocorrect: false,
@@ -527,7 +626,12 @@ class _FakeCrash extends StatelessWidget {
             children: [
               Text(
                 '$appName keeps stopping',
-                style: const TextStyle(fontSize: 20, color: Colors.white, fontWeight: FontWeight.w400, letterSpacing: -0.2),
+                style: const TextStyle(
+                  fontSize: 20,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w400,
+                  letterSpacing: -0.2,
+                ),
               ),
               const SizedBox(height: 18),
               _row(Icons.close_rounded, 'Close app', onClose),

@@ -21,6 +21,10 @@ class _LockAppState extends State<LockApp> {
   LockTarget? _target;
   int _session = 0;
   bool _done = true;
+  bool _hostResumed = false;
+  int _visibilityEpoch = 0;
+  int _request = 0;
+  String? _opening;
   final _bio = _Pulse();
   final Map<String, (String, Uint8List?)> _info = {};
 
@@ -32,9 +36,23 @@ class _LockAppState extends State<LockApp> {
         case 'target':
           await _open(call.arguments as String?);
         case 'resumed':
+          final visibility = ++_visibilityEpoch;
           final pkg = call.arguments as String?;
           if (pkg != null && (pkg != _target?.pkg || _done)) await _open(pkg);
+          if (!mounted || visibility != _visibilityEpoch) return null;
+          setState(() => _hostResumed = true);
           WidgetsBinding.instance.addPostFrameCallback((_) => _bio.pulse());
+        case 'stopped':
+          _visibilityEpoch++;
+          _hostResumed = false;
+          _request++;
+          _opening = null;
+          if (mounted) {
+            setState(() {
+              _done = true;
+              _target = null;
+            });
+          }
       }
       return null;
     });
@@ -47,7 +65,10 @@ class _LockAppState extends State<LockApp> {
 
   Future<void> _open(String? pkg) async {
     if (pkg == null) return;
+    if (_opening == pkg) return;
     if (pkg == _target?.pkg && !_done) return; // same lock still on screen — keep typed digits
+    final request = ++_request;
+    _opening = pkg;
     final cfgF = Store.loadConfig();
     final cached = _info[pkg];
     String name = cached?.$1 ?? '';
@@ -59,7 +80,8 @@ class _LockAppState extends State<LockApp> {
       _info[pkg] = (name, icon);
     }
     final cfg = await cfgF;
-    if (!mounted) return;
+    if (!mounted || request != _request) return;
+    _opening = null;
     setState(() {
       _cfg = cfg;
       _target = LockTarget(pkg: pkg, name: name, icon: icon);
@@ -69,24 +91,40 @@ class _LockAppState extends State<LockApp> {
   }
 
   void _unlocked() {
+    if (_done) return;
     final pkg = _target?.pkg;
     _done = true;
     Native.unlockSuccess(pkg);
   }
 
   @override
+  void dispose() {
+    _request++;
+    Native.setHandler((_) async => null);
+    _bio.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: overlayStyle,
+      value: lockOverlayStyle,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
         theme: buildTheme(),
         home: Scaffold(
-          backgroundColor: C.bg,
+          backgroundColor: const Color(0xFF0A0A0C),
           resizeToAvoidBottomInset: false,
           body: _cfg == null || _target == null
-              ? const ColoredBox(color: C.bg)
-              : LockView(key: ValueKey(_session), config: _cfg!, target: _target!, bioTrigger: _bio, onUnlock: _unlocked),
+              ? const ColoredBox(color: Color(0xFF0A0A0C))
+              : LockView(
+                  key: ValueKey(_session),
+                  config: _cfg!,
+                  active: _hostResumed,
+                  target: _target!,
+                  bioTrigger: _bio,
+                  onUnlock: _unlocked,
+                ),
         ),
       ),
     );

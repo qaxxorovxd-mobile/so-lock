@@ -16,7 +16,11 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
   // Quick cross-fade on tab switch (state of every tab is preserved).
-  late final AnimationController _fade = AnimationController(vsync: this, duration: const Duration(milliseconds: 180), value: 1);
+  late final AnimationController _fade = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 180),
+    value: 1,
+  );
 
   @override
   void dispose() {
@@ -57,7 +61,6 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.paddingOf(context).bottom;
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
@@ -93,40 +96,17 @@ class _HomeState extends State<Home> with SingleTickerProviderStateMixin {
             ],
           ),
         ),
-        bottomNavigationBar: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xF50E0E11),
-            border: Border(top: BorderSide(color: C.sep, width: 0.5)),
-          ),
-          padding: EdgeInsets.only(bottom: bottom),
-          height: 54 + bottom,
-          child: Row(
-            children: [
-              for (var i = 0; i < _items.length; i++)
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => _select(i),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(_tab == i ? _items[i].$2 : _items[i].$1, size: 25, color: _tab == i ? C.text : C.text3),
-                        const SizedBox(height: 3),
-                        Text(
-                          _items[i].$3,
-                          style: TextStyle(
-                            fontSize: 10.5,
-                            fontWeight: FontWeight.w500,
-                            color: _tab == i ? C.text : C.text3,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
+        bottomNavigationBar: CupertinoTabBar(
+          currentIndex: _tab,
+          onTap: _select,
+          backgroundColor: C.card.withValues(alpha: 0.96),
+          activeColor: C.text,
+          inactiveColor: C.text2,
+          border: const Border(top: BorderSide(color: C.sep, width: 0.5)),
+          items: [
+            for (final item in _items)
+              BottomNavigationBarItem(icon: Icon(item.$1), activeIcon: Icon(item.$2), label: item.$3),
+          ],
         ),
       ),
     );

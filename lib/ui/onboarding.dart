@@ -50,7 +50,7 @@ class _OnboardingState extends State<Onboarding> with WidgetsBindingObserver {
       subtitle: 'This code unlocks your protected apps',
       allowTypeSwitch: true,
     );
-    if (r == null) return;
+    if (r == null || !mounted) return;
     final salt = Security.newSalt();
     AppState.I.update((c) {
       c.type = r.type;
@@ -58,13 +58,13 @@ class _OnboardingState extends State<Onboarding> with WidgetsBindingObserver {
       c.hash = Security.hash(r.code, salt);
     });
     await _refresh();
-    setState(() => _step = 2);
+    if (mounted) setState(() => _step = 2);
   }
 
   Future<void> _finish() async {
     AppState.I.update((c) => c.setupDone = true);
     await AppState.I.save();
-    widget.onDone();
+    if (mounted) widget.onDone();
   }
 
   @override
@@ -88,47 +88,54 @@ class _OnboardingState extends State<Onboarding> with WidgetsBindingObserver {
 
   Widget _welcome() {
     final pad = MediaQuery.paddingOf(context);
-    return Padding(
-      padding: EdgeInsets.fromLTRB(28, pad.top + 40, 28, pad.bottom + 24),
-      child: Column(
-        children: [
-          const Spacer(flex: 2),
-          Container(
-            width: 108,
-            height: 108,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(26),
-              boxShadow: const [BoxShadow(color: Color(0x33FFFFFF), blurRadius: 40, spreadRadius: -12)],
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        padding: EdgeInsets.fromLTRB(28, pad.top + 32, 28, pad.bottom + 24),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: (constraints.maxHeight - pad.vertical - 56).clamp(0, double.infinity)),
+          child: IntrinsicHeight(
+            child: Column(
+              children: [
+                const Spacer(flex: 2),
+                Container(
+                  width: 108,
+                  height: 108,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(26),
+                    boxShadow: const [BoxShadow(color: Color(0x33FFFFFF), blurRadius: 40, spreadRadius: -12)],
+                  ),
+                  child: ClipRRect(borderRadius: BorderRadius.circular(26), child: Image.asset('assets/logo.webp')),
+                ),
+                const SizedBox(height: 26),
+                const Text(
+                  'So Lock',
+                  style: TextStyle(fontSize: 36, fontWeight: FontWeight.w700, color: C.text, letterSpacing: -1.2),
+                ),
+                const SizedBox(height: 8),
+                Text('Your apps. Only for you.', style: T.sub.copyWith(fontSize: 16)),
+                const Spacer(flex: 2),
+                const _Feature(CupertinoIcons.lock_shield_fill, 'Lock any app', 'With PIN, password or biometrics'),
+                const _Feature(
+                  CupertinoIcons.exclamationmark_shield_fill,
+                  'Decoy codes',
+                  'Under pressure? A decoy code locks the screen or fakes a crash',
+                ),
+                const _Feature(CupertinoIcons.camera_fill, 'Intruder Alert', 'Catch whoever enters a wrong code'),
+                const _Feature(CupertinoIcons.location_fill, 'Smart Lock', 'Automatic by time, place and Wi‑Fi'),
+                const Spacer(flex: 3),
+                PrimaryButton(
+                  'Get Started',
+                  onTap: () {
+                    setState(() => _step = 1);
+                    _createCode().then((_) {
+                      if (_step == 1 && mounted) setState(() => _step = 0);
+                    });
+                  },
+                ),
+              ],
             ),
-            child: ClipRRect(borderRadius: BorderRadius.circular(26), child: Image.asset('assets/logo.webp')),
           ),
-          const SizedBox(height: 26),
-          const Text(
-            'So Lock',
-            style: TextStyle(fontSize: 36, fontWeight: FontWeight.w700, color: C.text, letterSpacing: -1.2),
-          ),
-          const SizedBox(height: 8),
-          Text('Your apps. Only for you.', style: T.sub.copyWith(fontSize: 16)),
-          const Spacer(flex: 2),
-          const _Feature(CupertinoIcons.lock_shield_fill, 'Lock any app', 'With PIN, password or biometrics'),
-          const _Feature(
-            CupertinoIcons.exclamationmark_shield_fill,
-            'Decoy codes',
-            'Under pressure? A decoy code locks the screen or fakes a crash',
-          ),
-          const _Feature(CupertinoIcons.camera_fill, 'Intruder Alert', 'Catch whoever enters a wrong code'),
-          const _Feature(CupertinoIcons.location_fill, 'Smart Lock', 'Automatic by time, place and Wi‑Fi'),
-          const Spacer(flex: 3),
-          PrimaryButton(
-            'Get Started',
-            onTap: () {
-              setState(() => _step = 1);
-              _createCode().then((_) {
-                if (_step == 1 && mounted) setState(() => _step = 0);
-              });
-            },
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -175,7 +182,7 @@ class _OnboardingState extends State<Onboarding> with WidgetsBindingObserver {
                     on: _camera,
                     onTap: () async {
                       _camera = await Native.requestPermission('camera');
-                      setState(() {});
+                      if (mounted) setState(() {});
                     },
                   ),
                 ),
@@ -247,7 +254,7 @@ class _StatusButton extends StatelessWidget {
         padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
         child: Text(
           'Enable',
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 14),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
         ),
       ),
     );

@@ -49,3 +49,24 @@ Without it, release builds fall back to the debug key.
 On first launch, enable **So Lock** under *Settings → Accessibility*.
 
 > iOS does not allow third-party apps to lock other apps; on iOS only So Lock's own lock is available.
+
+## 1.2.0 design and reliability update
+
+- Light, inset grouped surfaces, quieter icons, consistent typography and native Cupertino tabs.
+- Dark lock screen with readable keypad styling; compact layouts wrap controls instead of overflowing.
+- Biometric prompts wait for the Android host and persisted attempt guard. Backgrounded or disposed sessions cancel authentication and reject late results.
+- Duplicate foreground events no longer restart a visible lock Activity. PIN/password remains available when the sensor fails.
+- Serialized settings/guard writes, independent temporary files, and bounded lockout arithmetic.
+
+## Verification
+
+```sh
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --release --split-per-abi --target-platform android-arm64
+```
+
+The tests cover authentication lifecycle races, PIN fallback, lockout enforcement, concurrent storage writes, and 11 screens at 390×844 and 320×568. Native fingerprint/face behavior still needs a physical-device check; mocked biometric tests cannot establish compatibility with every vendor sensor.
+
+The landing page source lives on the `gh-pages` branch and uses plain HTML, CSS and JavaScript.

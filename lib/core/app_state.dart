@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
@@ -29,6 +30,7 @@ class AppState extends ChangeNotifier {
   List<IntruderEvent> intruders = const [];
 
   Timer? _saveDebounce;
+  Future<void> _saving = Future.value();
 
   Future<void> init() async {
     config = await Store.loadConfig();
@@ -52,7 +54,9 @@ class AppState extends ChangeNotifier {
     appsLoading = true;
     notifyListeners();
     final raw = await Native.getApps();
-    apps = raw.map((m) => AppInfo(m['pkg'] as String, m['name'] as String, m['icon'] as Uint8List?)).toList(growable: false);
+    apps = raw
+        .map((m) => AppInfo(m['pkg'] as String, m['name'] as String, m['icon'] as Uint8List?))
+        .toList(growable: false);
     appsLoading = false;
     notifyListeners();
   }
@@ -72,8 +76,13 @@ class AppState extends ChangeNotifier {
 
   Future<void> save() async {
     _saveDebounce?.cancel();
-    await Store.saveConfig(config);
-    await Native.saveConfig(config.toNativeJson());
+    final snapshot = AppConfig.fromJson(jsonDecode(jsonEncode(config.toJson())) as Map<String, dynamic>);
+    final pending = _saving.then((_) async {
+      await Store.saveConfig(snapshot);
+      await Native.saveConfig(snapshot.toNativeJson());
+    });
+    _saving = pending.catchError((Object _) {});
+    await pending;
   }
 
   bool isLocked(String pkg) => config.locked.contains(pkg);

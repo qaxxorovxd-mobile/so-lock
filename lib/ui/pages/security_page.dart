@@ -33,7 +33,8 @@ class SecurityPage extends StatelessWidget {
                 const _Hero(),
                 Section(
                   header: 'Decoy codes',
-                  footer: 'A decoy code looks like a normal code to anyone watching. When entered, the chosen action runs.',
+                  footer:
+                      'A decoy code looks like a normal code to anyone watching. When entered, the chosen action runs.',
                   children: [
                     for (final d in c.duress)
                       Tile(
@@ -44,7 +45,10 @@ class SecurityPage extends StatelessWidget {
                         onTap: () => push(context, DuressEditPage(code: d)),
                       ),
                     Tile(
-                      leading: const SizedBox(width: 30, child: Icon(CupertinoIcons.add_circled_solid, color: C.blue, size: 24)),
+                      leading: const SizedBox(
+                        width: 30,
+                        child: Icon(CupertinoIcons.add_circled_solid, color: C.blue, size: 24),
+                      ),
                       title: 'Add decoy code',
                       titleColor: C.blue,
                       onTap: () => push(context, const DuressEditPage()),
@@ -143,11 +147,7 @@ class _Hero extends StatelessWidget {
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF26262B), Color(0xFF141416)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: const LinearGradient(colors: [C.card, C.card], begin: Alignment.topLeft, end: Alignment.bottomRight),
       ),
       child: const Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,7 +192,9 @@ class IntruderTile extends StatelessWidget {
               : ColoredBox(
                   color: C.card2,
                   child: Icon(
-                    e.reason == 'duress' ? CupertinoIcons.exclamationmark_shield : CupertinoIcons.person_crop_circle_badge_xmark,
+                    e.reason == 'duress'
+                        ? CupertinoIcons.exclamationmark_shield
+                        : CupertinoIcons.person_crop_circle_badge_xmark,
                     color: C.text2,
                     size: 22,
                   ),

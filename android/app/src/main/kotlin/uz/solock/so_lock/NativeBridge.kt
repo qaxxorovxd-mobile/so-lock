@@ -88,6 +88,10 @@ class NativeBridge(
             }
             "unlockSuccess" -> {
                 val pkg = call.arguments as String?
+                if (pkg == null || pkg != LockActivity.pendingTarget || LockActivity.current?.isFinishing != false) {
+                    result.success(false)
+                    return
+                }
                 if (pkg != null) LockService.instance?.markUnlocked(pkg)
                 LockActivity.pendingTarget = null
                 LockActivity.current?.finish()

@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:path_provider/path_provider.dart';
 
@@ -9,6 +10,7 @@ import 'models.dart';
 class Store {
   Store._();
   static Directory? _dir;
+  static final _writes = <String, Future<void>>{};
 
   static Future<Directory> dir() async {
     return _dir ??= await getApplicationSupportDirectory();
@@ -17,6 +19,7 @@ class Store {
   static Future<File> _file(String name) async => File('${(await dir()).path}/$name');
 
   static Future<Map<String, dynamic>?> _readJson(String name) async {
+    await _writes[name];
     try {
       final f = await _file(name);
       if (!await f.exists()) return null;
@@ -27,11 +30,22 @@ class Store {
   }
 
   /// Atomic write: never leaves a half-written config behind.
-  static Future<void> _writeJson(String name, Object data) async {
+  static Future<void> _writeJson(String name, Object data) {
+    final encoded = jsonEncode(data);
+    final pending = (_writes[name] ?? Future<void>.value()).then((_) => _writeEncoded(name, encoded));
+    _writes[name] = pending.catchError((Object _) {});
+    return pending;
+  }
+
+  static Future<void> _writeEncoded(String name, String encoded) async {
     final f = await _file(name);
-    final tmp = File('${f.path}.tmp');
-    await tmp.writeAsString(jsonEncode(data), flush: true);
-    await tmp.rename(f.path);
+    final tmp = File('${f.path}.${Random.secure().nextInt(1 << 32)}.tmp');
+    try {
+      await tmp.writeAsString(encoded, flush: true);
+      await tmp.rename(f.path);
+    } finally {
+      if (await tmp.exists()) await tmp.delete();
+    }
   }
 
   static Future<AppConfig> loadConfig() async {
@@ -59,7 +73,8 @@ class Store {
   static Future<List<IntruderEvent>> loadIntruders() async {
     final j = await _readJson('intruders.json');
     final list = (j?['events'] as List?) ?? const [];
-    return list.map((e) => IntruderEvent.fromJson(e as Map<String, dynamic>)).toList()..sort((a, b) => b.time.compareTo(a.time));
+    return list.map((e) => IntruderEvent.fromJson(e as Map<String, dynamic>)).toList()
+      ..sort((a, b) => b.time.compareTo(a.time));
   }
 
   static Future<void> addIntruder(IntruderEvent e) async {
@@ -91,4 +106,11 @@ class Store {
       } catch (_) {}
     }
   }
+}
+
+/// Persistence boundary for lock attempts, shared by both Flutter engines.
+class GuardStore {
+  const GuardStore();
+  Future<(int, int)> load() => Store.loadGuard();
+  Future<void> save(int fails, int until) => Store.saveGuard(fails, until);
 }

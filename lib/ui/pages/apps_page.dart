@@ -38,14 +38,14 @@ class _AppsPageState extends State<AppsPage> {
             .toList(growable: false);
 
         return LargeTitlePage(
-          title: 'Apps',
+          title: 'Your apps',
           slivers: [
             SliverToBoxAdapter(child: _StatusCard(state: s)),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: CupertinoSearchTextField(
-                  placeholder: 'Search',
+                  placeholder: 'Search apps',
                   backgroundColor: C.card,
                   style: T.body,
                   onChanged: (v) => setState(() => _q = v),
@@ -54,11 +54,11 @@ class _AppsPageState extends State<AppsPage> {
             ),
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
                 child: CupertinoSlidingSegmentedControl<int>(
                   groupValue: _filter,
-                  backgroundColor: C.card,
-                  thumbColor: C.pressed,
+                  backgroundColor: C.card2,
+                  thumbColor: C.card,
                   children: {
                     0: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 6),
@@ -83,7 +83,7 @@ class _AppsPageState extends State<AppsPage> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverList.builder(
                   itemCount: list.length,
                   itemBuilder: (context, i) =>
@@ -106,8 +106,8 @@ class _AppRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final r = BorderRadius.vertical(
-      top: first ? const Radius.circular(14) : Radius.zero,
-      bottom: last ? const Radius.circular(14) : Radius.zero,
+      top: first ? const Radius.circular(18) : Radius.zero,
+      bottom: last ? const Radius.circular(18) : Radius.zero,
     );
     return ClipRRect(
       borderRadius: r,
@@ -116,7 +116,7 @@ class _AppRow extends StatelessWidget {
         child: Column(
           children: [
             SizedBox(
-              height: 62,
+              height: 70,
               child: Row(
                 children: [
                   const SizedBox(width: 14),
@@ -164,7 +164,7 @@ class _LockToggle extends StatelessWidget {
           on ? CupertinoIcons.lock_fill : CupertinoIcons.lock_open,
           key: ValueKey(on),
           size: 17,
-          color: on ? Colors.black : C.text2,
+          color: on ? Colors.white : C.text2,
         ),
       ),
     );
@@ -180,15 +180,15 @@ class _StatusCard extends StatelessWidget {
     final s = state;
     if (Native.isAndroid && !s.accessibilityOn) {
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
         child: Pressable(
           onTap: () {
             LockGate.suppress();
             Native.openAccessibility();
           },
           radius: BorderRadius.circular(16),
-          color: const Color(0xFF2A1A12),
-          pressedColor: const Color(0xFF3A2418),
+          color: const Color(0xFFFFF3E5),
+          pressedColor: const Color(0xFFFFE5C2),
           child: const Padding(
             padding: EdgeInsets.all(16),
             child: Row(
@@ -215,7 +215,7 @@ class _StatusCard extends StatelessWidget {
     final on = s.config.enabled;
     final n = s.config.locked.length;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Container(
         padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
         decoration: BoxDecoration(color: C.card, borderRadius: BorderRadius.circular(16)),

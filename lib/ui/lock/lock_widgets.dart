@@ -103,6 +103,7 @@ class Keypad extends StatelessWidget {
                   duration: Duration(milliseconds: animate ? 140 : 0),
                   child: _IconKey(
                     icon: CupertinoIcons.delete_left,
+                    color: accent,
                     onTap: canDelete && enabled ? onDelete : null,
                     feedback: feedback,
                   ),
@@ -153,60 +154,67 @@ class _KeyState extends State<_Key> {
     final Border? border;
     switch (widget.style) {
       case KeypadStyle.filled:
-        fill = _down ? a.withValues(alpha: 0.42) : Colors.white.withValues(alpha: 0.11);
+        fill = _down ? a.withValues(alpha: 0.42) : a.withValues(alpha: 0.08);
         border = null;
       case KeypadStyle.ring:
         fill = _down ? a.withValues(alpha: 0.32) : Colors.transparent;
         border = Border.all(color: a.withValues(alpha: _down ? 0.9 : 0.38), width: 1.3);
       case KeypadStyle.minimal:
-        fill = _down ? Colors.white.withValues(alpha: 0.14) : Colors.transparent;
+        fill = _down ? a.withValues(alpha: 0.14) : Colors.transparent;
         border = null;
     }
-    return Listener(
-      onPointerDown: (_) {
-        if (widget.onTap == null) return;
-        widget.feedback?.call();
-        setState(() => _down = true);
-        widget.onTap!();
-      },
-      onPointerUp: (_) => _up(),
-      onPointerCancel: (_) => _up(),
-      child: AnimatedScale(
-        // Instant squish on touch, springy release.
-        scale: widget.animate && _down ? 0.92 : 1,
-        duration: Duration(milliseconds: _down ? 60 : 260),
-        curve: _down ? Curves.easeOut : Curves.easeOutBack,
-        child: AnimatedContainer(
-          duration: Duration(milliseconds: _down ? 0 : 260),
-          curve: Curves.easeOut,
-          width: s,
-          height: s,
-          decoration: BoxDecoration(shape: BoxShape.circle, color: fill, border: border),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                '${widget.digit}',
-                style: TextStyle(
-                  fontSize: s * 0.42,
-                  height: 1.05,
-                  fontWeight: widget.style == KeypadStyle.minimal ? FontWeight.w300 : FontWeight.w400,
-                  color: Colors.white,
-                  letterSpacing: 0,
-                  fontFeatures: const [FontFeature.tabularFigures()],
-                ),
-              ),
-              if (widget.style != KeypadStyle.minimal && _letters[widget.digit].isNotEmpty)
+    return Semantics(
+      button: true,
+      label: '${widget.digit}',
+      enabled: widget.onTap != null,
+      onTap: widget.onTap,
+      excludeSemantics: true,
+      child: Listener(
+        onPointerDown: (_) {
+          if (widget.onTap == null) return;
+          widget.feedback?.call();
+          setState(() => _down = true);
+          widget.onTap!();
+        },
+        onPointerUp: (_) => _up(),
+        onPointerCancel: (_) => _up(),
+        child: AnimatedScale(
+          // Instant squish on touch, springy release.
+          scale: widget.animate && _down ? 0.92 : 1,
+          duration: Duration(milliseconds: _down ? 60 : 260),
+          curve: _down ? Curves.easeOut : Curves.easeOutBack,
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: _down ? 0 : 260),
+            curve: Curves.easeOut,
+            width: s,
+            height: s,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: fill, border: border),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
                 Text(
-                  _letters[widget.digit],
+                  '${widget.digit}',
                   style: TextStyle(
-                    fontSize: s * 0.125,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 1.6,
-                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: s * 0.42,
+                    height: 1.05,
+                    fontWeight: widget.style == KeypadStyle.minimal ? FontWeight.w300 : FontWeight.w400,
+                    color: a,
+                    letterSpacing: 0,
+                    fontFeatures: const [FontFeature.tabularFigures()],
                   ),
                 ),
-            ],
+                if (widget.style != KeypadStyle.minimal && _letters[widget.digit].isNotEmpty)
+                  Text(
+                    _letters[widget.digit],
+                    style: TextStyle(
+                      fontSize: s * 0.125,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 1.6,
+                      color: a.withValues(alpha: 0.65),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -215,7 +223,8 @@ class _KeyState extends State<_Key> {
 }
 
 class _IconKey extends StatefulWidget {
-  const _IconKey({required this.icon, required this.onTap, this.feedback});
+  const _IconKey({required this.icon, required this.onTap, this.feedback, this.color = Colors.white});
+  final Color color;
   final IconData icon;
   final VoidCallback? onTap;
   final VoidCallback? feedback;
@@ -245,7 +254,7 @@ class _IconKeyState extends State<_IconKey> {
         child: AnimatedOpacity(
           opacity: _down ? 0.45 : 1,
           duration: Duration(milliseconds: _down ? 0 : 200),
-          child: Icon(widget.icon, color: Colors.white, size: 27),
+          child: Icon(widget.icon, color: widget.color, size: 27),
         ),
       ),
     ),
@@ -265,7 +274,14 @@ class BioButton extends StatelessWidget {
 
 /// Code progress dots. Each dot "pops" when filled; all dots tint on error/success.
 class PinDots extends StatelessWidget {
-  const PinDots({super.key, required this.length, required this.filled, required this.color, this.animate = true, this.tint});
+  const PinDots({
+    super.key,
+    required this.length,
+    required this.filled,
+    required this.color,
+    this.animate = true,
+    this.tint,
+  });
   final int length;
   final int filled;
   final Color color;

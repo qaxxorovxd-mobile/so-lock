@@ -57,8 +57,10 @@ class CustomizePage extends StatelessWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 12,
+                    alignment: WrapAlignment.spaceBetween,
                     children: [
                       for (final a in LockBg.accents)
                         GestureDetector(
@@ -70,7 +72,7 @@ class CustomizePage extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Color(a),
-                              border: Border.all(color: st.accent == a ? Colors.white : Colors.transparent, width: 2.5),
+                              border: Border.all(color: st.accent == a ? C.text : Colors.transparent, width: 2.5),
                               boxShadow: st.accent == a ? const [BoxShadow(color: C.bg, spreadRadius: -4.5)] : null,
                             ),
                           ),
@@ -119,7 +121,13 @@ class CustomizePage extends StatelessWidget {
                   ),
                 ),
                 if (st.background == -1) ...[
-                  _SliderTile(label: 'Blur', value: st.blur, min: 0, max: 40, onChanged: (v) => set((st) => st.blur = v)),
+                  _SliderTile(
+                    label: 'Blur',
+                    value: st.blur,
+                    min: 0,
+                    max: 40,
+                    onChanged: (v) => set((st) => st.blur = v),
+                  ),
                   _SliderTile(label: 'Dim', value: st.dim, min: 0, max: 0.8, onChanged: (v) => set((st) => st.dim = v)),
                 ],
               ],
@@ -213,7 +221,9 @@ class CustomizePage extends StatelessWidget {
               ],
             ),
             Section(
-              children: [Tile(title: 'Reset to default', titleColor: C.red, onTap: () => s.update((c) => c.style = LockStyle()))],
+              children: [
+                Tile(title: 'Reset to default', titleColor: C.red, onTap: () => s.update((c) => c.style = LockStyle())),
+              ],
             ),
           ],
         );
@@ -298,7 +308,13 @@ class _BgThumb extends StatelessWidget {
 }
 
 class _SliderTile extends StatelessWidget {
-  const _SliderTile({required this.label, required this.value, required this.min, required this.max, required this.onChanged});
+  const _SliderTile({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
   final String label;
   final double value, min, max;
   final ValueChanged<double> onChanged;

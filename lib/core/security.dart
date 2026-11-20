@@ -64,7 +64,7 @@ class Security {
   /// Lockout after repeated failures: 5 → 30s, then doubling, capped at 15 min.
   static Duration lockoutFor(int fails) {
     if (fails < 5) return Duration.zero;
-    final secs = 30 * pow(2, (fails - 5) ~/ 2).toInt();
+    final secs = 30 * pow(2, min((fails - 5) ~/ 2, 5)).toInt();
     return Duration(seconds: min(secs, 900));
   }
 }

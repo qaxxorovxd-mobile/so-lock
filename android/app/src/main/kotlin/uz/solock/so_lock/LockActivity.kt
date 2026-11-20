@@ -8,6 +8,9 @@ import io.flutter.embedding.android.FlutterFragmentActivity
 /** Hosts the lock UI from the pre-warmed engine. */
 class LockActivity : FlutterFragmentActivity() {
 
+    var lockVisible = false
+        private set
+
     companion object {
         @Volatile var current: LockActivity? = null
             private set
@@ -42,7 +45,18 @@ class LockActivity : FlutterFragmentActivity() {
         SoLockApp.lockChannel?.invokeMethod("resumed", pendingTarget)
     }
 
+    override fun onStop() {
+        lockVisible = false
+        super.onStop()
+        SoLockApp.lockChannel?.invokeMethod("stopped", null)
+    }
+
     override fun getCachedEngineId(): String = SoLockApp.LOCK_ENGINE
+
+    override fun onStart() {
+        super.onStart()
+        lockVisible = true
+    }
 
     override fun shouldDestroyEngineWithHost(): Boolean = false
 

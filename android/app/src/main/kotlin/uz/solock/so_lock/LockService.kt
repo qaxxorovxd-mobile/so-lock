@@ -138,6 +138,8 @@ class LockService : AccessibilityService() {
     }
 
     private fun showLock(pkg: String) {
+        // Repeated window events must not interrupt the biometric dialog.
+        if (LockActivity.current?.lockVisible == true && LockActivity.pendingTarget == pkg) return
         LockActivity.pendingTarget = pkg
         SoLockApp.lockChannel?.invokeMethod("target", pkg)
         val i = Intent(this, LockActivity::class.java).apply {

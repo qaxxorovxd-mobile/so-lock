@@ -57,8 +57,10 @@ class SmartPage extends StatelessWidget {
                       ),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 8,
+                          alignment: WrapAlignment.spaceBetween,
                           children: [
                             for (var d = 1; d <= 7; d++)
                               _DayChip(
@@ -89,7 +91,10 @@ class SmartPage extends StatelessWidget {
                       for (final ssid in sm.ssids)
                         Tile(
                           title: ssid,
-                          leading: const SizedBox(width: 30, child: Icon(CupertinoIcons.wifi, color: C.text2, size: 20)),
+                          leading: const SizedBox(
+                            width: 30,
+                            child: Icon(CupertinoIcons.wifi, color: C.text2, size: 20),
+                          ),
                           trailing: _RemoveButton(onTap: () => s.update((c) => c.smart.ssids.remove(ssid))),
                         ),
                       Tile(
@@ -120,7 +125,10 @@ class SmartPage extends StatelessWidget {
                         Tile(
                           title: p.name,
                           subtitle: '${p.radius.round()} m radius',
-                          leading: const SizedBox(width: 30, child: Icon(CupertinoIcons.house_fill, color: C.text2, size: 20)),
+                          leading: const SizedBox(
+                            width: 30,
+                            child: Icon(CupertinoIcons.house_fill, color: C.text2, size: 20),
+                          ),
                           trailing: _RemoveButton(onTap: () => s.update((c) => c.smart.places.remove(p))),
                         ),
                       Tile(
@@ -211,7 +219,7 @@ class SmartPage extends StatelessWidget {
             ),
             Expanded(
               child: CupertinoTheme(
-                data: const CupertinoThemeData(brightness: Brightness.dark),
+                data: const CupertinoThemeData(brightness: Brightness.light),
                 child: CupertinoDatePicker(
                   mode: CupertinoDatePickerMode.time,
                   use24hFormat: true,
@@ -275,13 +283,23 @@ class SmartPage extends StatelessWidget {
               Text('Radius: ${radius.round()} m'),
               Material(
                 color: Colors.transparent,
-                child: Slider(value: radius, min: 50, max: 1000, divisions: 19, onChanged: (v) => set(() => radius = v)),
+                child: Slider(
+                  value: radius,
+                  min: 50,
+                  max: 1000,
+                  divisions: 19,
+                  onChanged: (v) => set(() => radius = v),
+                ),
               ),
             ],
           ),
           actions: [
             CupertinoDialogAction(onPressed: () => Navigator.pop(c, false), child: const Text('Cancel')),
-            CupertinoDialogAction(isDefaultAction: true, onPressed: () => Navigator.pop(c, true), child: const Text('Save')),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.pop(c, true),
+              child: const Text('Save'),
+            ),
           ],
         ),
       ),
@@ -316,7 +334,7 @@ class _DayChip extends StatelessWidget {
       decoration: BoxDecoration(shape: BoxShape.circle, color: on ? C.silver : C.card2),
       child: Text(
         label,
-        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: on ? Colors.black : C.text2),
+        style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: on ? Colors.white : C.text2),
       ),
     ),
   );
@@ -345,7 +363,13 @@ class _RadioTile extends StatelessWidget {
 }
 
 class _Stepper extends StatelessWidget {
-  const _Stepper({required this.value, required this.min, required this.max, required this.onChanged, this.suffix = ''});
+  const _Stepper({
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+    this.suffix = '',
+  });
   final int value, min, max;
   final String suffix;
   final ValueChanged<int> onChanged;
@@ -378,5 +402,11 @@ class _Stepper extends StatelessWidget {
 }
 
 class StepperControl extends _Stepper {
-  const StepperControl({required super.value, required super.min, required super.max, required super.onChanged, super.suffix});
+  const StepperControl({
+    required super.value,
+    required super.min,
+    required super.max,
+    required super.onChanged,
+    super.suffix,
+  });
 }

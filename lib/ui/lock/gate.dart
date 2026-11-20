@@ -21,7 +21,6 @@ class LockGate extends StatefulWidget {
 class _LockGateState extends State<LockGate> with WidgetsBindingObserver {
   late bool _locked = widget.startLocked && AppState.I.config.lockSelf;
   int _session = 0;
-  bool _wentAway = false;
 
   @override
   void initState() {
@@ -40,7 +39,6 @@ class _LockGateState extends State<LockGate> with WidgetsBindingObserver {
     if (s == AppLifecycleState.hidden || s == AppLifecycleState.paused) {
       final suppressed = LockGate._suppressUntil != null && DateTime.now().isBefore(LockGate._suppressUntil!);
       if (!suppressed && AppState.I.config.lockSelf && !_locked) {
-        _wentAway = true;
         // Lock before the app is visible again, so contents never flash.
         setState(() {
           _locked = true;
@@ -51,10 +49,6 @@ class _LockGateState extends State<LockGate> with WidgetsBindingObserver {
       LockGate._suppressUntil = null;
       AppState.I.refreshStatus();
       AppState.I.loadIntruders();
-      if (_wentAway) {
-        _wentAway = false;
-        setState(() => _session++); // fresh lock view → biometrics prompt again
-      }
     }
   }
 

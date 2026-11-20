@@ -88,11 +88,16 @@ class _CodeEntryPageState extends State<CodeEntryPage> with SingleTickerProvider
       _error = null;
     });
     if (_input.length == _type.length) {
-      Future.delayed(const Duration(milliseconds: 90), () => _commit(_input));
+      final code = _input;
+      final type = _type;
+      Future.delayed(const Duration(milliseconds: 90), () {
+        if (mounted && _input == code && _type == type) _commit(code);
+      });
     }
   }
 
   void _commit(String code) {
+    if (!mounted || (_type.isPin && code.length != _type.length)) return;
     if (!_type.isPin && code.length < 4) {
       _fail('Password must be at least 4 characters');
       return;
@@ -138,12 +143,13 @@ class _CodeEntryPageState extends State<CodeEntryPage> with SingleTickerProvider
       context: context,
       builder: (c) => CupertinoActionSheet(
         actions: [
-          for (final t in LockType.values) CupertinoActionSheetAction(onPressed: () => Navigator.pop(c, t), child: Text(t.label)),
+          for (final t in LockType.values)
+            CupertinoActionSheetAction(onPressed: () => Navigator.pop(c, t), child: Text(t.label)),
         ],
         cancelButton: CupertinoActionSheetAction(onPressed: () => Navigator.pop(c), child: const Text('Cancel')),
       ),
     );
-    if (t != null && t != _type) {
+    if (mounted && t != null && t != _type) {
       setState(() {
         _type = t;
         _input = '';
@@ -238,7 +244,7 @@ class _CodeEntryPageState extends State<CodeEntryPage> with SingleTickerProvider
                               width: 40,
                               height: 40,
                               decoration: const BoxDecoration(color: C.silver, shape: BoxShape.circle),
-                              child: const Icon(CupertinoIcons.arrow_right, color: Colors.black, size: 20),
+                              child: const Icon(CupertinoIcons.arrow_right, color: Colors.white, size: 20),
                             ),
                           ),
                         ],

@@ -8,7 +8,14 @@ import 'theme.dart';
 
 /// Press feedback without ripples: instant highlight, soft release.
 class Pressable extends StatefulWidget {
-  const Pressable({super.key, required this.child, this.onTap, this.color = C.card, this.pressedColor = C.pressed, this.radius});
+  const Pressable({
+    super.key,
+    required this.child,
+    this.onTap,
+    this.color = C.card,
+    this.pressedColor = C.pressed,
+    this.radius,
+  });
   final Widget child;
   final VoidCallback? onTap;
   final Color color;
@@ -29,17 +36,21 @@ class _PressableState extends State<Pressable> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTapDown: (_) => _set(true),
-      onTapUp: (_) => _set(false),
-      onTapCancel: () => _set(false),
-      onTap: widget.onTap,
-      child: AnimatedContainer(
-        duration: Duration(milliseconds: _down ? 0 : 220),
-        curve: Curves.easeOut,
-        decoration: BoxDecoration(color: _down ? widget.pressedColor : widget.color, borderRadius: widget.radius),
-        child: widget.child,
+    return Semantics(
+      button: widget.onTap != null,
+      enabled: widget.onTap != null,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (_) => _set(true),
+        onTapUp: (_) => _set(false),
+        onTapCancel: () => _set(false),
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: _down ? 0 : 220),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(color: _down ? widget.pressedColor : widget.color, borderRadius: widget.radius),
+          child: widget.child,
+        ),
       ),
     );
   }
@@ -67,17 +78,17 @@ class Section extends StatelessWidget {
       }
     }
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 26),
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (header != null)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 7),
-              child: Text(header!.toUpperCase(), style: T.header),
+              child: Text(header!, style: T.header),
             ),
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(18),
             child: ColoredBox(
               color: C.card,
               child: Column(children: rows),
@@ -104,8 +115,8 @@ class Glyph extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     width: size,
     height: size,
-    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(size * 0.25)),
-    child: Icon(icon, size: size * 0.6, color: Colors.white),
+    decoration: BoxDecoration(color: C.card2, borderRadius: BorderRadius.circular(size * 0.25)),
+    child: Icon(icon, size: size * 0.6, color: C.text2),
   );
 }
 
@@ -135,9 +146,9 @@ class Tile extends StatelessWidget {
     return Pressable(
       onTap: onTap,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 50),
+        constraints: const BoxConstraints(minHeight: 56),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Row(
             children: [
               if (leading != null) ...[leading!, const SizedBox(width: 14)],
@@ -151,9 +162,21 @@ class Tile extends StatelessWidget {
                   ],
                 ),
               ),
-              if (value != null) ...[const SizedBox(width: 8), Text(value!, style: T.body.copyWith(color: C.text2))],
+              if (value != null) ...[
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    value!,
+                    textAlign: TextAlign.end,
+                    style: T.body.copyWith(color: C.text2),
+                  ),
+                ),
+              ],
               if (trailing != null) ...[const SizedBox(width: 8), trailing!],
-              if (chevron) ...[const SizedBox(width: 6), const Icon(CupertinoIcons.chevron_forward, size: 17, color: C.text3)],
+              if (chevron) ...[
+                const SizedBox(width: 6),
+                const Icon(CupertinoIcons.chevron_forward, size: 17, color: C.text3),
+              ],
             ],
           ),
         ),
@@ -163,7 +186,14 @@ class Tile extends StatelessWidget {
 }
 
 class SwitchTile extends StatelessWidget {
-  const SwitchTile({super.key, required this.title, this.subtitle, this.leading, required this.value, required this.onChanged});
+  const SwitchTile({
+    super.key,
+    required this.title,
+    this.subtitle,
+    this.leading,
+    required this.value,
+    required this.onChanged,
+  });
   final String title;
   final String? subtitle;
   final Widget? leading;
@@ -236,7 +266,14 @@ class AppIcon extends StatelessWidget {
 
 /// Large-title page with iOS collapse behaviour.
 class LargeTitlePage extends StatelessWidget {
-  const LargeTitlePage({super.key, required this.title, required this.slivers, this.trailing, this.leading, this.previousTitle});
+  const LargeTitlePage({
+    super.key,
+    required this.title,
+    required this.slivers,
+    this.trailing,
+    this.leading,
+    this.previousTitle,
+  });
   final String title;
   final List<Widget> slivers;
   final Widget? trailing;
@@ -255,7 +292,7 @@ class LargeTitlePage extends StatelessWidget {
             trailing: trailing,
             leading: leading,
             previousPageTitle: previousTitle,
-            backgroundColor: C.bg,
+            backgroundColor: C.bg.withValues(alpha: 0.94),
             border: null,
             stretch: true,
           ),
@@ -286,7 +323,7 @@ class SubPage extends StatelessWidget {
             largeTitle: Text(title),
             previousPageTitle: 'Back',
             trailing: trailing,
-            backgroundColor: C.bg,
+            backgroundColor: C.bg.withValues(alpha: 0.94),
             border: null,
           ),
           const SliverToBoxAdapter(child: SizedBox(height: 8)),
@@ -299,7 +336,7 @@ class SubPage extends StatelessWidget {
 }
 
 class PrimaryButton extends StatelessWidget {
-  const PrimaryButton(this.label, {super.key, this.onTap, this.color = C.silver, this.textColor = Colors.black});
+  const PrimaryButton(this.label, {super.key, this.onTap, this.color = C.silver, this.textColor = Colors.white});
   final String label;
   final VoidCallback? onTap;
   final Color color;
@@ -309,7 +346,7 @@ class PrimaryButton extends StatelessWidget {
     onTap: onTap,
     color: onTap == null ? C.card2 : color,
     pressedColor: onTap == null ? C.card2 : Color.lerp(color, Colors.black, 0.18)!,
-    radius: BorderRadius.circular(14),
+    radius: BorderRadius.circular(18),
     child: SizedBox(
       height: 54,
       width: double.infinity,
@@ -328,9 +365,16 @@ class PrimaryButton extends StatelessWidget {
   );
 }
 
-Future<R?> push<R>(BuildContext context, Widget page) => Navigator.of(context).push<R>(CupertinoPageRoute(builder: (_) => page));
+Future<R?> push<R>(BuildContext context, Widget page) =>
+    Navigator.of(context).push<R>(CupertinoPageRoute(builder: (_) => page));
 
-Future<bool> confirm(BuildContext context, String title, String message, {String ok = 'Yes', bool destructive = false}) async {
+Future<bool> confirm(
+  BuildContext context,
+  String title,
+  String message, {
+  String ok = 'Yes',
+  bool destructive = false,
+}) async {
   final r = await showCupertinoDialog<bool>(
     context: context,
     builder: (c) => CupertinoAlertDialog(
@@ -368,7 +412,8 @@ class _Toast extends StatefulWidget {
 }
 
 class _ToastState extends State<_Toast> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 200))..forward();
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 200))
+    ..forward();
   @override
   void initState() {
     super.initState();
